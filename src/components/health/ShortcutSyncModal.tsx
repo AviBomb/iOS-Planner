@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, Play, Copy, Check, ExternalLink, HelpCircle, Sparkles } from 'lucide-react';
-import { triggerHealthSyncShortcut, getAppleHealthShortcutGuide } from '../../services/shortcutsBridge';
+import { X, Play, Copy, Check, ExternalLink, Sparkles, AlertTriangle } from 'lucide-react';
+import { triggerHealthSyncShortcut } from '../../services/shortcutsBridge';
 import { AppleHealthSummary } from '../../types/health';
 import { audioAlarm } from '../../services/audioAlarmService';
+import { storageService } from '../../services/storageService';
 
 interface ShortcutSyncModalProps {
   isOpen: boolean;
@@ -16,20 +17,43 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
   onManualImport
 }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [shortcutName, setShortcutName] = useState(() => storageService.getSettings().shortcutName || 'PlanFlowHealtSync');
   const [manualJson, setManualJson] = useState('{\n  "steps": 9250,\n  "sleepHours": 7.8,\n  "activeCalories": 520,\n  "waterOunces": 64,\n  "restingHeartRate": 61\n}');
   const [activeTab, setActiveTab] = useState<'run' | 'guide' | 'manual'>('run');
 
   if (!isOpen) return null;
 
-  const guideSteps = getAppleHealthShortcutGuide();
+  const handleShortcutNameChange = (newName: string) => {
+    setShortcutName(newName);
+    storageService.saveSettings({ shortcutName: newName });
+  };
 
   const handleRunShortcut = () => {
     audioAlarm.playChime();
-    triggerHealthSyncShortcut();
+    triggerHealthSyncShortcut(shortcutName);
+  };
+
+  const returnUrlBase = typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : 'https://your-site.github.io/repo/';
+  const urlTemplate = `${returnUrlBase}?steps=[Step Count]&calories=[Active Energy]&sleep=[Time in Bed]`;
+
+  const handleCopyUrlTemplate = () => {
+    navigator.clipboard.writeText(urlTemplate);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
   };
 
   const handleCopyGuide = () => {
-    const text = guideSteps.map(s => `${s.step}. ${s.title}: ${s.instruction}`).join('\n\n');
+    const text = `PlanFlow Apple Shortcuts Recipe:
+Shortcut Name: ${shortcutName}
+
+1. Action 1: "Find Health Samples" -> Type: Steps (Today)
+2. Action 2: "Find Health Samples" -> Type: Active Energy (Today)
+3. Action 3: "Find Health Samples" -> Type: Sleep Analysis (Today)
+4. Action 4: "URL" -> Set to: ${urlTemplate}
+5. Action 5: "Open URLs" -> Point to the URL above.
+IMPORTANT: Delete any "Show Result" action so iOS does not halt on a "Done" screen!`;
+
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -86,7 +110,7 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
             onClick={() => setActiveTab('guide')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === 'guide' ? 'bg-ios-blue text-white shadow-sm' : 'text-ios-textSecondary hover:text-white'}`}
           >
-            Setup Recipe
+            Fix "Done" Screen
           </button>
           <button
             onClick={() => setActiveTab('manual')}
@@ -99,13 +123,50 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
         {/* Tab 1: Run Shortcut */}
         {activeTab === 'run' && (
           <div className="mt-4 space-y-4">
+            {/* Shortcut Name Selector */}
+            <div className="p-3.5 rounded-2xl bg-ios-cardElevated border border-ios-separator">
+              <label className="block text-[11px] font-bold text-ios-textSecondary uppercase tracking-wider mb-1">
+                Shortcut Name on Your iPhone
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={shortcutName}
+                  onChange={(e) => handleShortcutNameChange(e.target.value)}
+                  placeholder="e.g. PlanFlowHealtSync"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-ios-card border border-ios-separator text-white text-xs font-mono focus:outline-none focus:border-ios-pink"
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => handleShortcutNameChange('PlanFlowHealtSync')}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${
+                    shortcutName === 'PlanFlowHealtSync' ? 'bg-ios-blue text-white border-ios-blue' : 'text-ios-textSecondary border-ios-separator'
+                  }`}
+                >
+                  PlanFlowHealtSync
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleShortcutNameChange('PlanFlowHealthSync')}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${
+                    shortcutName === 'PlanFlowHealthSync' ? 'bg-ios-blue text-white border-ios-blue' : 'text-ios-textSecondary border-ios-separator'
+                  }`}
+                >
+                  PlanFlowHealthSync
+                </button>
+              </div>
+            </div>
+
+            {/* Launch Action */}
             <div className="p-4 rounded-2xl bg-gradient-to-br from-ios-cardElevated to-zinc-900 border border-ios-separator">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Play className="w-4 h-4 text-ios-pink" />
-                Launch 'PlanFlowHealthSync'
+                Launch '{shortcutName}'
               </h3>
               <p className="text-xs text-ios-textSecondary mt-1 leading-relaxed">
-                Tapping the button below launches the native Apple Shortcuts engine on your iPhone. It queries HealthKit for your steps, sleep duration, and active calories, then redirects back to PlanFlow with your live metrics.
+                Tapping below launches your shortcut on your iPhone. It queries Apple Health and redirects back into PlanFlow with live values.
               </p>
 
               <button
@@ -117,51 +178,96 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-ios-cardElevated border border-ios-separator text-xs text-ios-textSecondary space-y-2">
-              <div className="flex items-center gap-1.5 font-semibold text-white">
-                <HelpCircle className="w-3.5 h-3.5 text-ios-blue" />
-                How it works without Swift code
+            {/* Done Screen Tip Alert */}
+            <div className="p-3.5 rounded-2xl bg-ios-yellow/10 border border-ios-yellow/20 text-xs text-ios-yellow flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Seeing a "Done" button on your phone?</span>
+                <p className="text-[11px] text-ios-yellow/80 mt-0.5 leading-relaxed">
+                  Switch to the "Fix 'Done' Screen" tab above. Make sure your shortcut's final action is <strong>"Open URLs"</strong>, not "Show Result"!
+                </p>
               </div>
-              <p className="leading-relaxed">
-                iOS web browsers cannot access Apple Health directly due to Apple sandboxing. iOS Shortcuts acts as the authorized native bridge: it has built-in permission to read HealthKit and pass values securely into your web app.
-              </p>
             </div>
           </div>
         )}
 
-        {/* Tab 2: Guide */}
+        {/* Tab 2: Guide & Fix Done Screen */}
         {activeTab === 'guide' && (
           <div className="mt-4 space-y-3">
+            <div className="p-3.5 rounded-2xl bg-ios-red/10 border border-ios-red/30">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-ios-red">
+                <AlertTriangle className="w-4 h-4" />
+                Why it halted on "Done" with data on screen:
+              </div>
+              <p className="text-xs text-ios-textSecondary mt-1 leading-relaxed">
+                If an iOS Shortcut outputs a value without opening a URL, or has a <strong>"Show Result"</strong> action, iOS stops and waits for you to tap "Done".
+                To send the data into PlanFlow automatically, the shortcut must end with <strong>Open URLs</strong>.
+              </p>
+            </div>
+
+            {/* Copy Return URL action */}
+            <div className="p-3.5 rounded-2xl bg-ios-cardElevated border border-ios-separator">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-ios-textSecondary uppercase">Your Return URL</span>
+                <button
+                  onClick={handleCopyUrlTemplate}
+                  className="text-xs text-ios-blue hover:underline flex items-center gap-1 font-semibold"
+                >
+                  {copiedUrl ? <Check className="w-3 h-3 text-ios-green" /> : <Copy className="w-3 h-3" />}
+                  {copiedUrl ? 'Copied URL!' : 'Copy URL'}
+                </button>
+              </div>
+              <p className="text-xs text-white font-mono bg-ios-card p-2 rounded-lg mt-1.5 break-all select-all">
+                {urlTemplate}
+              </p>
+            </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-ios-textSecondary uppercase">3-Minute Setup Recipe</span>
+              <span className="text-xs font-semibold text-ios-textSecondary uppercase">Exact 3-Step Setup</span>
               <button
                 onClick={handleCopyGuide}
                 className="text-xs text-ios-blue hover:underline flex items-center gap-1"
               >
                 {copied ? <Check className="w-3 h-3 text-ios-green" /> : <Copy className="w-3 h-3" />}
-                {copied ? 'Copied!' : 'Copy Steps'}
+                {copied ? 'Copied Recipe!' : 'Copy Recipe'}
               </button>
             </div>
 
             <div className="space-y-2.5">
-              {guideSteps.map((step) => (
-                <div key={step.step} className="p-3 rounded-xl bg-ios-cardElevated border border-ios-separator/60">
-                  <div className="flex items-center gap-2 text-xs font-bold text-white">
-                    <span className="w-5 h-5 rounded-full bg-ios-blue/20 text-ios-blue flex items-center justify-center text-[11px]">
-                      {step.step}
-                    </span>
-                    {step.title}
-                  </div>
-                  <p className="text-xs text-ios-textSecondary mt-1 ml-7 leading-relaxed">
-                    {step.instruction}
-                  </p>
+              <div className="p-3 rounded-xl bg-ios-cardElevated border border-ios-separator/60">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <span className="w-5 h-5 rounded-full bg-ios-blue/20 text-ios-blue flex items-center justify-center text-[11px]">1</span>
+                  Find Health Samples
                 </div>
-              ))}
+                <p className="text-xs text-ios-textSecondary mt-1 ml-7 leading-relaxed">
+                  Add "Find Health Samples" for Steps (Today), Active Energy (Today), and Sleep (Today).
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-ios-cardElevated border border-ios-separator/60">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <span className="w-5 h-5 rounded-full bg-ios-blue/20 text-ios-blue flex items-center justify-center text-[11px]">2</span>
+                  Add URL Action
+                </div>
+                <p className="text-xs text-ios-textSecondary mt-1 ml-7 leading-relaxed">
+                  Add a "URL" action, paste your Return URL from above, and insert the Health sample variables into [Step Count], [Active Energy], and [Sleep].
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-ios-green/10 border border-ios-green/30">
+                <div className="flex items-center gap-2 text-xs font-bold text-ios-green">
+                  <span className="w-5 h-5 rounded-full bg-ios-green/20 text-ios-green flex items-center justify-center text-[11px]">3</span>
+                  Add "Open URLs" Action (Final Step)
+                </div>
+                <p className="text-xs text-ios-textSecondary mt-1 ml-7 leading-relaxed">
+                  Add "Open URLs" targeting the URL from Step 2. Delete any "Show Result" action. Now iOS immediately redirects with live metrics!
+                </p>
+              </div>
             </div>
 
             <div className="p-3 rounded-xl bg-ios-blue/10 border border-ios-blue/20 text-xs text-ios-blue flex items-center gap-2">
               <ExternalLink className="w-4 h-4 shrink-0" />
-              <span>Tip: Set an iOS Personal Automation to run this every day at 8:00 AM automatically!</span>
+              <span>Personal Automation: In Shortcuts &gt; Automations, create an automation to run this shortcut every morning or when PlanFlow opens!</span>
             </div>
           </div>
         )}
@@ -170,7 +276,7 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
         {activeTab === 'manual' && (
           <div className="mt-4 space-y-3">
             <p className="text-xs text-ios-textSecondary">
-              You can test the Apple Health metrics visualization right now by applying sample health data:
+              Apply sample health data to verify the dashboard widgets and health ring animations:
             </p>
             <textarea
               value={manualJson}
@@ -191,4 +297,3 @@ export const ShortcutSyncModal: React.FC<ShortcutSyncModalProps> = ({
     </div>
   );
 };
-

@@ -97,7 +97,40 @@ const INITIAL_HEALTH: AppleHealthSummary = {
   syncedViaShortcut: false
 };
 
+export interface AppSettings {
+  shortcutName: string;
+  autoSyncEnabled: boolean;
+  autoSyncIntervalMinutes: number;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  shortcutName: 'PlanFlowHealtSync', // Supports user's exact shortcut name
+  autoSyncEnabled: true,
+  autoSyncIntervalMinutes: 5
+};
+
 export const storageService = {
+  getSettings(): AppSettings {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (data) return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    } catch (e) {
+      console.warn('Failed to load settings from localStorage', e);
+    }
+    return DEFAULT_SETTINGS;
+  },
+
+  saveSettings(settings: Partial<AppSettings>): AppSettings {
+    try {
+      const current = this.getSettings();
+      const updated = { ...current, ...settings };
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      console.error('Failed to save settings to localStorage', e);
+      return DEFAULT_SETTINGS;
+    }
+  },
   getTasks(): ScheduleTask[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TASKS);
