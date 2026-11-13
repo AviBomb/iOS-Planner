@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* iOS Safe Areas */
+.pt-safe {
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+.pb-safe {
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+.pl-safe {
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+.pr-safe {
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+/* iOS Frosted Glass */
+.ios-glass {
+  background: rgba(28, 28, 30, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ios-glass-header {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.ios-glass-tabbar {
+  background: rgba(20, 20, 22, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Touch responsiveness */
+.ios-tap-active {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.ios-tap-active:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+

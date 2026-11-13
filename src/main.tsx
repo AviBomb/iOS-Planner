@@ -1,0 +1,25 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+import { registerSW } from 'virtual:pwa-register';
+
+// Register Service Worker for offline PWA functionality
+if ('serviceWorker' in navigator) {
+  registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      console.log('New PlanFlow content available.');
+    },
+    onOfflineReady() {
+      console.log('PlanFlow ready to work offline on iOS.');
+    }
+  });
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
